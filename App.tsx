@@ -53,6 +53,13 @@ function App() {
         return [...prev, newScore];
     });
   };
+  
+  const deleteScore = (scoreId: string) => {
+    if (window.confirm('Are you sure you want to delete this evaluation? This action cannot be undone.')) {
+        setScores(prev => prev.filter(s => s.id !== scoreId));
+    }
+  };
+
 
   const handleLogin = (role: UserRole, id?: string) => setUser({ role, id });
   const handleLogout = () => setUser(null);
@@ -104,6 +111,7 @@ function App() {
             criteria={criteria}
             scores={judgeData.judgeScores}
             onScoreSubmit={addOrUpdateScore}
+            onScoreDelete={deleteScore}
         />;
       default:
         return null;

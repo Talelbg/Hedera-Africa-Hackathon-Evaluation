@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Project, Judge, Criterion, Score } from '../types';
 import ScoringModal from './ScoringModal';
-import { EditIcon, ListIcon } from './icons';
+import { EditIcon, ListIcon, DeleteIcon } from './icons';
 
 interface JudgeDashboardProps {
   judge: Judge;
@@ -9,9 +9,10 @@ interface JudgeDashboardProps {
   criteria: Criterion[];
   scores: Score[];
   onScoreSubmit: (newScore: Score) => void;
+  onScoreDelete: (scoreId: string) => void;
 }
 
-const JudgeDashboard: React.FC<JudgeDashboardProps> = ({ judge, projects, criteria, scores, onScoreSubmit }) => {
+const JudgeDashboard: React.FC<JudgeDashboardProps> = ({ judge, projects, criteria, scores, onScoreSubmit, onScoreDelete }) => {
   const [scoringProject, setScoringProject] = useState<Project | null>(null);
 
   const scoresByProjectId = useMemo(() => {
@@ -90,13 +91,27 @@ const JudgeDashboard: React.FC<JudgeDashboardProps> = ({ judge, projects, criter
                     <p className="font-semibold text-gray-900">{project.name}</p>
                     <p className="text-sm text-gray-500">{project.track} - {project.trl}</p>
                   </div>
-                  <button
-                    onClick={() => setScoringProject(project)}
-                    className="px-4 py-2 rounded-md bg-white border border-gray-300 hover:bg-gray-100 text-gray-800 font-medium transition-colors flex items-center"
-                  >
-                     <EditIcon className="w-4 h-4 mr-2"/>
-                    Edit Score
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setScoringProject(project)}
+                      className="px-4 py-2 rounded-md bg-white border border-gray-300 hover:bg-gray-100 text-gray-800 font-medium transition-colors flex items-center"
+                    >
+                       <EditIcon className="w-4 h-4 mr-2"/>
+                      Edit Score
+                    </button>
+                    <button
+                        onClick={() => {
+                            const scoreToDelete = scoresByProjectId.get(project.id);
+                            if (scoreToDelete) {
+                                onScoreDelete(scoreToDelete.id);
+                            }
+                        }}
+                        className="p-2 rounded-md bg-white border border-gray-300 text-gray-500 hover:bg-red-100 hover:text-red-600 hover:border-red-200 transition-colors"
+                        aria-label="Delete evaluation"
+                    >
+                        <DeleteIcon className="w-5 h-5" />
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
