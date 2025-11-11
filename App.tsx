@@ -1,18 +1,25 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { UserRole, Project, Judge, Criterion, Score, Track } from './types';
-import { mockProjects as initialProjects, mockJudges as initialJudges, evaluationCriteria as initialCriteria, mockScores as initialScores } from './data/mockData';
+import { loadDatabase, saveDatabase } from './services/dbService';
 import LoginScreen from './components/LoginScreen';
 import AdminDashboard from './components/AdminDashboard';
 import JudgeDashboard from './components/JudgeDashboard';
 import Header from './components/Header';
 
+const dbState = loadDatabase();
+
 function App() {
   const [user, setUser] = useState<{ role: UserRole; id?: string } | null>(null);
 
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
-  const [judges, setJudges] = useState<Judge[]>(initialJudges);
-  const [criteria, setCriteria] = useState<Criterion[]>(initialCriteria);
-  const [scores, setScores] = useState<Score[]>(initialScores);
+  const [projects, setProjects] = useState<Project[]>(dbState.projects);
+  const [judges, setJudges] = useState<Judge[]>(dbState.judges);
+  const [criteria, setCriteria] = useState<Criterion[]>(dbState.criteria);
+  const [scores, setScores] = useState<Score[]>(dbState.scores);
+
+  useEffect(() => {
+    saveDatabase({ projects, judges, criteria, scores });
+  }, [projects, judges, criteria, scores]);
+
 
   // --- Admin Handlers ---
   const addProjects = (newProjects: Project[]) => setProjects(prev => [...prev, ...newProjects]);
@@ -22,7 +29,11 @@ function App() {
     setScores(prev => prev.filter(s => s.projectId !== projectId)); // Also delete associated scores
   };
 
-  const addJudge = (newJudge: Omit<Judge, 'id'>) => setJudges(prev => [...prev, { ...newJudge, id: `j_${Date.now()}` }]);
+  const addJudge = (newJudge: Omit<Judge, 'id'>) => {
+    const newJudgeWithId = { ...newJudge, id: `j_${Date.now()}` };
+    setJudges(prev => [...prev, newJudgeWithId]);
+    return newJudgeWithId;
+  };
   const editJudge = (updatedJudge: Judge) => setJudges(prev => prev.map(j => j.id === updatedJudge.id ? updatedJudge : j));
   const deleteJudge = (judgeId: string) => {
     if (window.confirm('Are you sure you want to delete this judge? This will also delete all their scores and cannot be undone.')) {
@@ -60,8 +71,17 @@ function App() {
     }
   };
 
+  const handleAdminLogin = () => setUser({ role: UserRole.ADMIN });
 
-  const handleLogin = (role: UserRole, id?: string) => setUser({ role, id });
+  const handleJuryLogin = (judgeId: string, newJudgeData?: Omit<Judge, 'id'>) => {
+    let finalJudgeId = judgeId;
+    if (judgeId === 'new' && newJudgeData) {
+      const newJudge = addJudge(newJudgeData);
+      finalJudgeId = newJudge.id;
+    }
+    setUser({ role: UserRole.JUDGE, id: finalJudgeId });
+  };
+  
   const handleLogout = () => setUser(null);
 
   const judgeData = useMemo(() => {
@@ -80,7 +100,7 @@ function App() {
 
   const renderContent = () => {
     if (!user) {
-      return <LoginScreen onLogin={handleLogin} judges={judges} />;
+      return <LoginScreen onAdminLogin={handleAdminLogin} onJuryLogin={handleJuryLogin} judges={judges} />;
     }
 
     switch (user.role) {
@@ -102,7 +122,10 @@ function App() {
         />;
       case UserRole.JUDGE:
         if (!judgeData) {
-            return <p className="p-8 text-center text-red-500">Error: Logged in judge profile not found.</p>
+            // This can happen if the judge was deleted while they were logged in.
+            // Log them out to prevent a crash.
+            handleLogout();
+            return <p className="p-8 text-center text-red-500">Your judge profile was not found. You have been logged out.</p>
         }
         
         return <JudgeDashboard

@@ -10,6 +10,12 @@ interface ScoringModalProps {
   onSave: (newScore: Score) => void;
 }
 
+const LinkIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 inline-block mr-1.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+    </svg>
+);
+
 const ScoringModal: React.FC<ScoringModalProps> = ({ project, judgeId, criteria, existingScore, onClose, onSave }) => {
   const [scores, setScores] = useState<{ [criterionId: string]: number }>({});
   const [juryTrl, setJuryTrl] = useState<TRL>(project.trl);
@@ -61,10 +67,29 @@ const ScoringModal: React.FC<ScoringModalProps> = ({ project, judgeId, criteria,
             {/* Left side: Project Info & Notes */}
             <div className="space-y-4">
                <div>
-                  <h4 className="font-semibold text-gray-700 mb-2">Project Description</h4>
-                  <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md border border-gray-200 max-h-32 overflow-y-auto">
-                    {project.description}
-                  </p>
+                  <h4 className="font-semibold text-gray-700 mb-2">Project Details</h4>
+                   <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-md border border-gray-200 space-y-3">
+                      <p className="max-h-24 overflow-y-auto">{project.description}</p>
+                       {project.links && project.links.length > 0 && (
+                          <div className="border-t border-gray-200 pt-3">
+                              <h5 className="font-medium text-gray-700 mb-2">Project Links</h5>
+                              <div className="space-y-1.5">
+                                  {project.links.map((link, index) => (
+                                      <a 
+                                        key={index} 
+                                        href={link.url} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="flex items-center text-[#5c11c9] hover:underline"
+                                      >
+                                          <LinkIcon />
+                                          <span>{link.label}</span>
+                                      </a>
+                                  ))}
+                              </div>
+                          </div>
+                      )}
+                  </div>
               </div>
               <div>
                 <label htmlFor="juryTrl" className="block text-sm font-medium text-gray-700 mb-1">Your TRL Assessment</label>

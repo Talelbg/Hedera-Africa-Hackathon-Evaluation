@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Project, Track, TRL, TRACKS } from '../types';
+import { Project, Track, TRL, TRACKS, ProjectLink } from '../types';
+import { DeleteIcon } from './icons';
 
 interface EditProjectModalProps {
   project: Project;
@@ -8,15 +9,32 @@ interface EditProjectModalProps {
 }
 
 const EditProjectModal: React.FC<EditProjectModalProps> = ({ project, onClose, onSave }) => {
-  const [formData, setFormData] = useState<Project>(project);
+  const [formData, setFormData] = useState<Project>({ ...project, links: project.links || [] });
 
   useEffect(() => {
-    setFormData(project);
+    setFormData({ ...project, links: project.links || [] });
   }, [project]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleLinkChange = (index: number, field: 'label' | 'url', value: string) => {
+    const newLinks = [...(formData.links || [])];
+    newLinks[index] = { ...newLinks[index], [field]: value };
+    setFormData(prev => ({ ...prev, links: newLinks }));
+  };
+
+  const addLink = () => {
+    const newLinks = [...(formData.links || []), { label: '', url: '' }];
+    setFormData(prev => ({ ...prev, links: newLinks }));
+  };
+  
+  const removeLink = (index: number) => {
+    const newLinks = [...(formData.links || [])];
+    newLinks.splice(index, 1);
+    setFormData(prev => ({ ...prev, links: newLinks }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -32,7 +50,7 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({ project, onClose, o
           <h3 className="text-xl font-bold text-gray-900">Edit Project</h3>
         </div>
         <form onSubmit={handleSubmit}>
-          <div className="p-6 space-y-4">
+          <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
               <input
@@ -82,6 +100,44 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({ project, onClose, o
                     <option value={TRL.PROTOTYPE}>{TRL.PROTOTYPE}</option>
                   </select>
                 </div>
+            </div>
+             <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">External Links</label>
+                <div className="space-y-2">
+                    {(formData.links || []).map((link, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <input 
+                            type="text" 
+                            placeholder="Label (e.g., GitHub)" 
+                            value={link.label} 
+                            onChange={(e) => handleLinkChange(index, 'label', e.target.value)} 
+                            className="w-1/3 bg-white border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-[#5c11c9] focus:outline-none"
+                        />
+                        <input 
+                            type="url" 
+                            placeholder="https://github.com/user/repo" 
+                            value={link.url} 
+                            onChange={(e) => handleLinkChange(index, 'url', e.target.value)} 
+                            className="flex-1 bg-white border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-[#5c11c9] focus:outline-none"
+                        />
+                        <button 
+                            type="button" 
+                            onClick={() => removeLink(index)}
+                            className="p-2 rounded-md bg-gray-100 hover:bg-red-100 text-gray-600 hover:text-red-700 transition-colors"
+                            aria-label="Remove link"
+                        >
+                            <DeleteIcon className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                </div>
+                <button 
+                    type="button" 
+                    onClick={addLink} 
+                    className="mt-3 text-sm font-medium text-[#5c11c9] hover:text-[#4a0e9f]"
+                >
+                    + Add Link
+                </button>
             </div>
           </div>
           <div className="p-6 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">

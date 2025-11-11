@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Project, Judge, Criterion, Score, ProjectResult, TRACKS, TRL, Track } from '../types';
+import { Project, Judge, Criterion, Score, ProjectResult, TRACKS, TRL, Track, ProjectLink } from '../types';
 import ResultsTable from './ResultsTable';
 import EditProjectModal from './EditProjectModal';
 import JudgeModal from './JudgeModal';
@@ -113,7 +113,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ projects, judges, crite
                 const sheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[sheetName];
                 // FIX: Cast the result of `sheet_to_json` instead of passing a type argument, as `XLSX` is untyped.
-                const json = XLSX.utils.sheet_to_json(worksheet) as { 'Project Name': string; 'Description': string; 'TRL': string }[];
+                const json = XLSX.utils.sheet_to_json(worksheet) as { 'Project Name': string; 'Description': string; 'TRL': string; 'Links'?: string }[];
 
                 const getTRL = (trlString: string): TRL => {
                     if (typeof trlString !== 'string') return TRL.IDEATION;
@@ -126,13 +126,23 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ projects, judges, crite
 
                 const newProjects: Project[] = json
                     .filter(row => row['Project Name']) // Ensure project name exists
-                    .map((row, index) => ({
-                        id: `p_imported_${Date.now()}_${index}`,
-                        name: row['Project Name'],
-                        description: row['Description'] || 'No description provided.',
-                        track: importTrack,
-                        trl: getTRL(row['TRL']),
-                    }));
+                    .map((row, index) => {
+                        const links: ProjectLink[] = row.Links?.split(',')
+                            .map(linkPair => {
+                                const [label, url] = linkPair.split('|').map(s => s.trim());
+                                return { label, url };
+                            })
+                            .filter(l => l.label && l.url) || [];
+
+                        return {
+                            id: `p_imported_${Date.now()}_${index}`,
+                            name: row['Project Name'],
+                            description: row['Description'] || 'No description provided.',
+                            track: importTrack,
+                            trl: getTRL(row['TRL']),
+                            links: links.length > 0 ? links : undefined,
+                        };
+                    });
                 
                 if (newProjects.length > 0) {
                     addProjects(newProjects);
@@ -147,7 +157,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ projects, judges, crite
 
             } catch (error) {
                 console.error("Error importing file:", error);
-                alert("Failed to import projects. Please check the file format and column headers ('Project Name', 'Description', 'TRL') and try again.");
+                alert("Failed to import projects. Please check the file format and column headers ('Project Name', 'Description', 'TRL', 'Links') and try again.");
             }
         };
         reader.readAsArrayBuffer(importFile);
@@ -170,7 +180,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ projects, judges, crite
                         <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
                             <h4 className="font-semibold text-gray-900 mb-3">Import Projects from Excel</h4>
                             <p className="text-sm text-gray-500 mb-4">
-                                Upload an Excel file (.xlsx, .xls, .csv) with columns: "Project Name", "Description", and "TRL". New projects will be added to the list.
+                                Upload an Excel file (.xlsx, .xls, .csv) with columns: "Project Name", "Description", "TRL", and "Links" (optional, format: Label1|URL1, Label2|URL2).
                             </p>
                             <div className="flex flex-col sm:flex-row items-center gap-4">
                                 <div className='w-full sm:w-auto'>

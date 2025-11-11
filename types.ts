@@ -20,12 +20,18 @@ export const TRACKS = [
 
 export type Track = typeof TRACKS[number];
 
+export interface ProjectLink {
+  label: string;
+  url: string;
+}
+
 export interface Project {
   id: string;
   name: string;
   description: string;
   track: Track;
   trl: TRL;
+  links?: ProjectLink[];
 }
 
 export interface Judge {
