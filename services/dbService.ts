@@ -10,19 +10,32 @@ interface DBState {
 
 const DB_KEY = 'hah_evaluation_platform_db';
 
-// --- Internal "Mock Database" Functions ---
+let dbCache: DBState | null = null;
+let cacheTimestamp = 0;
+const CACHE_DURATION = 100;
 
 const readDB = (): DBState => {
+  const now = Date.now();
+  if (dbCache && (now - cacheTimestamp) < CACHE_DURATION) {
+    return dbCache;
+  }
+  
   try {
     const serializedState = localStorage.getItem(DB_KEY);
-    return serializedState ? JSON.parse(serializedState) : { projects: [], judges: [], criteria: [], scores: [] };
+    dbCache = serializedState ? JSON.parse(serializedState) : { projects: [], judges: [], criteria: [], scores: [] };
+    cacheTimestamp = now;
+    return dbCache;
   } catch (e) {
-    return { projects: [], judges: [], criteria: [], scores: [] };
+    dbCache = { projects: [], judges: [], criteria: [], scores: [] };
+    return dbCache;
   }
 };
 
 const writeDB = (db: DBState): void => {
   localStorage.setItem(DB_KEY, JSON.stringify(db));
+  dbCache = db;
+  cacheTimestamp = Date.now();
+  window.dispatchEvent(new Event('platform-data-refresh'));
 };
 
 // --- Simulated API Service Layer ---
@@ -44,22 +57,25 @@ export const createProjects = async (newProjects: Project[]): Promise<Project[]>
     const db = readDB();
     db.projects.push(...newProjects);
     writeDB(db);
-    return simulateApi(newProjects);
+    const result = await simulateApi(newProjects);
+    return result;
 };
 
 export const updateProject = async (updatedProject: Project): Promise<Project> => {
     const db = readDB();
     db.projects = db.projects.map(p => p.id === updatedProject.id ? updatedProject : p);
     writeDB(db);
-    return simulateApi(updatedProject);
+    const result = await simulateApi(updatedProject);
+    return result;
 };
 
 export const deleteProject = async (projectId: string): Promise<{ success: boolean }> => {
     const db = readDB();
     db.projects = db.projects.filter(p => p.id !== projectId);
-    db.scores = db.scores.filter(s => s.projectId !== projectId); // Cascade delete
+    db.scores = db.scores.filter(s => s.projectId !== projectId);
     writeDB(db);
-    return simulateApi({ success: true });
+    const result = await simulateApi({ success: true });
+    return result;
 };
 
 // Judge API
@@ -68,22 +84,25 @@ export const createJudge = async (newJudgeData: Omit<Judge, 'id'>): Promise<Judg
     const newJudge = { ...newJudgeData, id: `j_${Date.now()}` };
     db.judges.push(newJudge);
     writeDB(db);
-    return simulateApi(newJudge);
+    const result = await simulateApi(newJudge);
+    return result;
 };
 
 export const updateJudge = async (updatedJudge: Judge): Promise<Judge> => {
     const db = readDB();
     db.judges = db.judges.map(j => j.id === updatedJudge.id ? updatedJudge : j);
     writeDB(db);
-    return simulateApi(updatedJudge);
+    const result = await simulateApi(updatedJudge);
+    return result;
 };
 
 export const deleteJudge = async (judgeId: string): Promise<{ success: boolean }> => {
     const db = readDB();
     db.judges = db.judges.filter(j => j.id !== judgeId);
-    db.scores = db.scores.filter(s => s.judgeId !== judgeId); // Cascade delete
+    db.scores = db.scores.filter(s => s.judgeId !== judgeId);
     writeDB(db);
-    return simulateApi({ success: true });
+    const result = await simulateApi({ success: true });
+    return result;
 };
 
 // Criterion API
@@ -92,21 +111,24 @@ export const createCriterion = async (newCriterionData: Omit<Criterion, 'id'>): 
     const newCriterion = { ...newCriterionData, id: `c_${Date.now()}` };
     db.criteria.push(newCriterion);
     writeDB(db);
-    return simulateApi(newCriterion);
+    const result = await simulateApi(newCriterion);
+    return result;
 };
 
 export const updateCriterion = async (updatedCriterion: Criterion): Promise<Criterion> => {
     const db = readDB();
     db.criteria = db.criteria.map(c => c.id === updatedCriterion.id ? updatedCriterion : c);
     writeDB(db);
-    return simulateApi(updatedCriterion);
+    const result = await simulateApi(updatedCriterion);
+    return result;
 };
 
 export const deleteCriterion = async (criterionId: string): Promise<{ success: boolean }> => {
     const db = readDB();
     db.criteria = db.criteria.filter(c => c.id !== criterionId);
     writeDB(db);
-    return simulateApi({ success: true });
+    const result = await simulateApi({ success: true });
+    return result;
 };
 
 
@@ -120,12 +142,14 @@ export const createOrUpdateScore = async (score: Score): Promise<Score> => {
         db.scores.push(score);
     }
     writeDB(db);
-    return simulateApi(score);
+    const result = await simulateApi(score);
+    return result;
 };
 
 export const deleteScore = async (scoreId: string): Promise<{ success: boolean }> => {
     const db = readDB();
     db.scores = db.scores.filter(s => s.id !== scoreId);
     writeDB(db);
-    return simulateApi({ success: true });
+    const result = await simulateApi({ success: true });
+    return result;
 };
