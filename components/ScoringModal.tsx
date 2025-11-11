@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Project, Criterion, Score, TRL } from '../types';
 
 interface ScoringModalProps {
@@ -17,24 +17,19 @@ const LinkIcon = () => (
 );
 
 const ScoringModal: React.FC<ScoringModalProps> = ({ project, judgeId, criteria, existingScore, onClose, onSave }) => {
-  const [scores, setScores] = useState<{ [criterionId: string]: number }>({});
-  const [juryTrl, setJuryTrl] = useState<TRL>(project.trl);
-  const [notes, setNotes] = useState('');
-
-  useEffect(() => {
+  const [scores, setScores] = useState<{ [criterionId: string]: number }>(() => {
     if (existingScore) {
-      setScores(existingScore.criteriaScores);
-      setJuryTrl(existingScore.juryTrl || project.trl);
-      setNotes(existingScore.notes || '');
-    } else {
-      const initialScores: { [criterionId: string]: number } = {};
-      criteria.forEach(c => {
-        initialScores[c.id] = 5;
-      });
-      setScores(initialScores);
-      setJuryTrl(project.trl);
+      return existingScore.criteriaScores;
     }
-  }, [existingScore, criteria, project.trl]);
+    const initialScores: { [criterionId: string]: number } = {};
+    criteria.forEach(c => {
+      initialScores[c.id] = 5;
+    });
+    return initialScores;
+  });
+  
+  const [juryTrl, setJuryTrl] = useState<TRL>(existingScore?.juryTrl || project.trl);
+  const [notes, setNotes] = useState(existingScore?.notes || '');
 
   const handleScoreChange = (criterionId: string, value: number) => {
     const newScore = Math.max(0, Math.min(10, value));
