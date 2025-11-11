@@ -1,82 +1,109 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { UserRole, Project, Judge, Criterion, Score, Track } from './types';
-import { loadDatabase, saveDatabase } from './services/dbService';
+import * as dbService from './services/dbService';
 import LoginScreen from './components/LoginScreen';
 import AdminDashboard from './components/AdminDashboard';
 import JudgeDashboard from './components/JudgeDashboard';
 import Header from './components/Header';
 
-const dbState = loadDatabase();
 
 function App() {
   const [user, setUser] = useState<{ role: UserRole; id?: string } | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [projects, setProjects] = useState<Project[]>(dbState.projects);
-  const [judges, setJudges] = useState<Judge[]>(dbState.judges);
-  const [criteria, setCriteria] = useState<Criterion[]>(dbState.criteria);
-  const [scores, setScores] = useState<Score[]>(dbState.scores);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [judges, setJudges] = useState<Judge[]>([]);
+  const [criteria, setCriteria] = useState<Criterion[]>([]);
+  const [scores, setScores] = useState<Score[]>([]);
 
   useEffect(() => {
-    saveDatabase({ projects, judges, criteria, scores });
-  }, [projects, judges, criteria, scores]);
+    // Load initial data from our "database" when the app starts
+    const fetchData = async () => {
+        const data = await dbService.getAllData();
+        setProjects(data.projects);
+        setJudges(data.judges);
+        setCriteria(data.criteria);
+        setScores(data.scores);
+        setIsLoading(false);
+    };
+    fetchData();
+  }, []);
 
 
   // --- Admin Handlers ---
-  const addProjects = (newProjects: Project[]) => setProjects(prev => [...prev, ...newProjects]);
-  const editProject = (updatedProject: Project) => setProjects(prev => prev.map(p => p.id === updatedProject.id ? updatedProject : p));
-  const deleteProject = (projectId: string) => {
+  const addProjects = async (newProjects: Project[]) => {
+      const createdProjects = await dbService.createProjects(newProjects);
+      setProjects(prev => [...prev, ...createdProjects]);
+  };
+  const editProject = async (updatedProject: Project) => {
+      const savedProject = await dbService.updateProject(updatedProject);
+      setProjects(prev => prev.map(p => p.id === savedProject.id ? savedProject : p));
+  };
+  const deleteProject = async (projectId: string) => {
+    await dbService.deleteProject(projectId);
     setProjects(prev => prev.filter(p => p.id !== projectId));
-    setScores(prev => prev.filter(s => s.projectId !== projectId)); // Also delete associated scores
+    setScores(prev => prev.filter(s => s.projectId !== projectId));
   };
 
-  const addJudge = (newJudge: Omit<Judge, 'id'>) => {
-    const newJudgeWithId = { ...newJudge, id: `j_${Date.now()}` };
-    setJudges(prev => [...prev, newJudgeWithId]);
-    return newJudgeWithId;
+  const addJudge = async (newJudgeData: Omit<Judge, 'id'>) => {
+    const newJudge = await dbService.createJudge(newJudgeData);
+    setJudges(prev => [...prev, newJudge]);
+    return newJudge;
   };
-  const editJudge = (updatedJudge: Judge) => setJudges(prev => prev.map(j => j.id === updatedJudge.id ? updatedJudge : j));
-  const deleteJudge = (judgeId: string) => {
+  const editJudge = async (updatedJudge: Judge) => {
+      const savedJudge = await dbService.updateJudge(updatedJudge);
+      setJudges(prev => prev.map(j => j.id === savedJudge.id ? savedJudge : j));
+  };
+  const deleteJudge = async (judgeId: string) => {
     if (window.confirm('Are you sure you want to delete this judge? This will also delete all their scores and cannot be undone.')) {
+        await dbService.deleteJudge(judgeId);
         setJudges(prev => prev.filter(j => j.id !== judgeId));
-        setScores(prev => prev.filter(s => s.judgeId !== judgeId)); // Also delete associated scores
+        setScores(prev => prev.filter(s => s.judgeId !== judgeId));
     }
   };
 
-  const addCriterion = (newCriterion: Omit<Criterion, 'id'>) => setCriteria(prev => [...prev, { ...newCriterion, id: `c_${Date.now()}` }]);
-  const editCriterion = (updatedCriterion: Criterion) => setCriteria(prev => prev.map(c => c.id === updatedCriterion.id ? updatedCriterion : c));
-  const deleteCriterion = (criterionId: string) => {
+  const addCriterion = async (newCriterionData: Omit<Criterion, 'id'>) => {
+      const newCriterion = await dbService.createCriterion(newCriterionData);
+      setCriteria(prev => [...prev, newCriterion]);
+  };
+  const editCriterion = async (updatedCriterion: Criterion) => {
+      const savedCriterion = await dbService.updateCriterion(updatedCriterion);
+      setCriteria(prev => prev.map(c => c.id === savedCriterion.id ? savedCriterion : c));
+  };
+  const deleteCriterion = async (criterionId: string) => {
      if (window.confirm('Are you sure you want to delete this criterion? This could affect existing scores.')) {
+        await dbService.deleteCriterion(criterionId);
         setCriteria(prev => prev.filter(c => c.id !== criterionId));
-        // Note: This does not remove the score entry from existing scores.
-        // The calculation service will simply ignore it.
      }
   };
 
   // --- Judge Handler ---
-  const addOrUpdateScore = (newScore: Score) => {
+  const addOrUpdateScore = async (newScore: Score) => {
+    const savedScore = await dbService.createOrUpdateScore(newScore);
     setScores(prev => {
-        const index = prev.findIndex(s => s.id === newScore.id);
+        const index = prev.findIndex(s => s.id === savedScore.id);
         if (index > -1) {
             const updatedScores = [...prev];
-            updatedScores[index] = newScore;
+            updatedScores[index] = savedScore;
             return updatedScores;
         }
-        return [...prev, newScore];
+        return [...prev, savedScore];
     });
   };
   
-  const deleteScore = (scoreId: string) => {
+  const deleteScore = async (scoreId: string) => {
     if (window.confirm('Are you sure you want to delete this evaluation? This action cannot be undone.')) {
+        await dbService.deleteScore(scoreId);
         setScores(prev => prev.filter(s => s.id !== scoreId));
     }
   };
 
   const handleAdminLogin = () => setUser({ role: UserRole.ADMIN });
 
-  const handleJuryLogin = (judgeId: string, newJudgeData?: Omit<Judge, 'id'>) => {
+  const handleJuryLogin = async (judgeId: string, newJudgeData?: Omit<Judge, 'id'>) => {
     let finalJudgeId = judgeId;
     if (judgeId === 'new' && newJudgeData) {
-      const newJudge = addJudge(newJudgeData);
+      const newJudge = await addJudge(newJudgeData);
       finalJudgeId = newJudge.id;
     }
     setUser({ role: UserRole.JUDGE, id: finalJudgeId });
@@ -99,6 +126,10 @@ function App() {
   }, [user, judges, projects, scores]);
 
   const renderContent = () => {
+    if (isLoading) {
+        return <div className="p-8 text-center">Loading platform data...</div>
+    }
+
     if (!user) {
       return <LoginScreen onAdminLogin={handleAdminLogin} onJuryLogin={handleJuryLogin} judges={judges} />;
     }
@@ -122,8 +153,6 @@ function App() {
         />;
       case UserRole.JUDGE:
         if (!judgeData) {
-            // This can happen if the judge was deleted while they were logged in.
-            // Log them out to prevent a crash.
             handleLogout();
             return <p className="p-8 text-center text-red-500">Your judge profile was not found. You have been logged out.</p>
         }
