@@ -11,45 +11,52 @@ interface DBState {
 
 const DB_KEY = 'hah_evaluation_platform_db';
 
+// In-memory cache for the database state to reduce localStorage reads.
+let dbCache: DBState | null = null;
+
 // --- Internal "Mock Database" Functions ---
 
 const writeDB = (db: DBState): void => {
   try {
     localStorage.setItem(DB_KEY, JSON.stringify(db));
+    dbCache = db; // Update the in-memory cache on write.
   } catch(e) {
       console.error("Failed to write to localStorage", e);
   }
 };
 
-const initializeDB = (): DBState => {
+const readDB = (): DBState => {
+  // Return from cache if available.
+  if (dbCache) {
+    return dbCache;
+  }
+
+  try {
+    const serializedState = localStorage.getItem(DB_KEY);
+    if (serializedState) {
+        const db = JSON.parse(serializedState);
+        // A simple check to ensure the data structure is valid.
+        if (db.projects && db.judges && db.criteria && db.scores) {
+            dbCache = db; // Prime the cache.
+            return db;
+        }
+        console.warn("Data in localStorage is corrupted. Re-initializing with mock data.");
+    }
+  } catch (e) {
+    console.error("Failed to read from localStorage.", e);
+  }
+
+  // If we reach here, there's no valid data in localStorage.
+  // Initialize with mock data.
+  console.log("No valid data found in localStorage. Initializing with mock data.");
   const initialState: DBState = {
     projects: MOCK_PROJECTS,
     judges: MOCK_JUDGES,
     criteria: MOCK_CRITERIA,
     scores: MOCK_SCORES,
   };
-  writeDB(initialState);
+  writeDB(initialState); // This will also populate the cache.
   return initialState;
-};
-
-const readDB = (): DBState => {
-  try {
-    const serializedState = localStorage.getItem(DB_KEY);
-    if (!serializedState) {
-        console.log("No data found in localStorage. Initializing with mock data.");
-        return initializeDB();
-    }
-    const db = JSON.parse(serializedState);
-    // A simple check to ensure the data structure is not completely broken
-    if (!db.projects || !db.judges || !db.criteria || !db.scores) {
-        console.warn("Data in localStorage is corrupted. Re-initializing with mock data.");
-        return initializeDB();
-    }
-    return db;
-  } catch (e) {
-    console.error("Failed to read from localStorage, re-initializing with mock data.", e);
-    return initializeDB();
-  }
 };
 
 
@@ -70,15 +77,23 @@ export const getAllData = async (): Promise<DBState> => {
 // Project API
 export const createProjects = async (newProjects: Project[]): Promise<Project[]> => {
     const db = readDB();
-    db.projects.push(...newProjects);
+    // Create new unique IDs for imported projects to avoid conflicts
+    const projectsWithIds = newProjects.map((p, index) => ({
+        ...p,
+        id: `p_${Date.now()}_${index}`,
+    }));
+    db.projects.push(...projectsWithIds);
     writeDB(db);
-    return simulateApi(newProjects);
+    return simulateApi(projectsWithIds);
 };
 
 export const updateProject = async (updatedProject: Project): Promise<Project> => {
     const db = readDB();
-    db.projects = db.projects.map(p => p.id === updatedProject.id ? updatedProject : p);
-    writeDB(db);
+    const index = db.projects.findIndex(p => p.id === updatedProject.id);
+    if (index !== -1) {
+        db.projects[index] = updatedProject;
+        writeDB(db);
+    }
     return simulateApi(updatedProject);
 };
 
@@ -101,8 +116,11 @@ export const createJudge = async (newJudgeData: Omit<Judge, 'id'>): Promise<Judg
 
 export const updateJudge = async (updatedJudge: Judge): Promise<Judge> => {
     const db = readDB();
-    db.judges = db.judges.map(j => j.id === updatedJudge.id ? updatedJudge : j);
-    writeDB(db);
+    const index = db.judges.findIndex(j => j.id === updatedJudge.id);
+    if (index !== -1) {
+        db.judges[index] = updatedJudge;
+        writeDB(db);
+    }
     return simulateApi(updatedJudge);
 };
 
@@ -125,14 +143,19 @@ export const createCriterion = async (newCriterionData: Omit<Criterion, 'id'>): 
 
 export const updateCriterion = async (updatedCriterion: Criterion): Promise<Criterion> => {
     const db = readDB();
-    db.criteria = db.criteria.map(c => c.id === updatedCriterion.id ? updatedCriterion : c);
-    writeDB(db);
+    const index = db.criteria.findIndex(c => c.id === updatedCriterion.id);
+    if (index !== -1) {
+        db.criteria[index] = updatedCriterion;
+        writeDB(db);
+    }
     return simulateApi(updatedCriterion);
 };
 
 export const deleteCriterion = async (criterionId: string): Promise<{ success: boolean }> => {
     const db = readDB();
     db.criteria = db.criteria.filter(c => c.id !== criterionId);
+    // Note: Deleting a criterion doesn't remove scores based on it to preserve history,
+    // but the scores will be ignored in calculations since the criterion is gone.
     writeDB(db);
     return simulateApi({ success: true });
 };
