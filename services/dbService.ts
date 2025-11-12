@@ -9,174 +9,162 @@ interface DBState {
   scores: Score[];
 }
 
-const DB_KEY = 'hah_evaluation_platform_db';
+const DB_KEY = 'HAH_EVAL_DB';
 
-// In-memory cache for the database state to reduce localStorage reads.
-let dbCache: DBState | null = null;
-
-// --- Internal "Mock Database" Functions ---
-
-const writeDB = (db: DBState): void => {
-  try {
-    localStorage.setItem(DB_KEY, JSON.stringify(db));
-    dbCache = db; // Update the in-memory cache on write.
-  } catch(e) {
-      console.error("Failed to write to localStorage", e);
-  }
-};
-
-const readDB = (): DBState => {
-  // Return from cache if available.
-  if (dbCache) {
-    return dbCache;
-  }
-
-  try {
-    const serializedState = localStorage.getItem(DB_KEY);
-    if (serializedState) {
-        const db = JSON.parse(serializedState);
-        // A simple check to ensure the data structure is valid.
-        if (db.projects && db.judges && db.criteria && db.scores) {
-            dbCache = db; // Prime the cache.
-            return db;
-        }
-        console.warn("Data in localStorage is corrupted. Re-initializing with mock data.");
+// Initialize the database from localStorage or mock data
+const initializeDB = (): DBState => {
+  const storedDB = localStorage.getItem(DB_KEY);
+  if (storedDB) {
+    try {
+      // Basic validation to ensure stored data has the expected structure
+      const parsed = JSON.parse(storedDB);
+      if (parsed.projects && parsed.judges && parsed.criteria && parsed.scores) {
+        return parsed;
+      }
+    } catch (e) {
+      console.error("Failed to parse DB from localStorage, resetting.", e);
     }
-  } catch (e) {
-    console.error("Failed to read from localStorage.", e);
   }
 
-  // If we reach here, there's no valid data in localStorage.
-  // Initialize with mock data.
-  console.log("No valid data found in localStorage. Initializing with mock data.");
-  const initialState: DBState = {
+  // If no valid DB in localStorage, initialize with mock data
+  const mockDB: DBState = {
     projects: MOCK_PROJECTS,
     judges: MOCK_JUDGES,
     criteria: MOCK_CRITERIA,
     scores: MOCK_SCORES,
   };
-  writeDB(initialState); // This will also populate the cache.
-  return initialState;
+  localStorage.setItem(DB_KEY, JSON.stringify(mockDB));
+  return mockDB;
 };
 
+// --- DB Accessor Functions ---
 
-// --- Simulated API Service Layer ---
-// Each function simulates a network request with a short delay.
+const getDB = (): DBState => {
+  // Always read from storage to ensure we have the latest data if app is open in multiple tabs.
+  const storedDB = localStorage.getItem(DB_KEY);
+  if (storedDB) {
+      return JSON.parse(storedDB);
+  }
+  return initializeDB();
+};
 
-const simulateApi = <T>(data: T): Promise<T> => 
-  new Promise(resolve => setTimeout(() => resolve(data), 50));
-
+const saveDB = (db: DBState): void => {
+  localStorage.setItem(DB_KEY, JSON.stringify(db));
+};
 
 // --- Public API ---
 
 export const getAllData = async (): Promise<DBState> => {
-    const db = readDB();
-    return simulateApi(db);
+  return Promise.resolve(getDB());
 };
 
 // Project API
-export const createProjects = async (newProjects: Project[]): Promise<Project[]> => {
-    const db = readDB();
-    // Create new unique IDs for imported projects to avoid conflicts
-    const projectsWithIds = newProjects.map((p, index) => ({
-        ...p,
-        id: `p_${Date.now()}_${index}`,
-    }));
-    db.projects.push(...projectsWithIds);
-    writeDB(db);
-    return simulateApi(projectsWithIds);
+export const createProjects = async (newProjectsData: Omit<Project, 'id'>[]): Promise<Project[]> => {
+  const db = getDB();
+  const createdProjects: Project[] = newProjectsData.map((p, i) => ({ ...p, id: `p_imported_${Date.now()}_${i}`}));
+  db.projects.push(...createdProjects);
+  saveDB(db);
+  return Promise.resolve(createdProjects);
 };
 
 export const updateProject = async (updatedProject: Project): Promise<Project> => {
-    const db = readDB();
-    const index = db.projects.findIndex(p => p.id === updatedProject.id);
-    if (index !== -1) {
-        db.projects[index] = updatedProject;
-        writeDB(db);
-    }
-    return simulateApi(updatedProject);
+  const db = getDB();
+  const index = db.projects.findIndex(p => p.id === updatedProject.id);
+  if (index !== -1) {
+    db.projects[index] = updatedProject;
+    saveDB(db);
+    return Promise.resolve(updatedProject);
+  }
+  throw new Error("Project not found");
 };
 
 export const deleteProject = async (projectId: string): Promise<{ success: boolean }> => {
-    const db = readDB();
-    db.projects = db.projects.filter(p => p.id !== projectId);
-    db.scores = db.scores.filter(s => s.projectId !== projectId); // Cascade delete
-    writeDB(db);
-    return simulateApi({ success: true });
+  const db = getDB();
+  db.projects = db.projects.filter(p => p.id !== projectId);
+  // Also delete associated scores
+  db.scores = db.scores.filter(s => s.projectId !== projectId);
+  saveDB(db);
+  return Promise.resolve({ success: true });
 };
 
 // Judge API
 export const createJudge = async (newJudgeData: Omit<Judge, 'id'>): Promise<Judge> => {
-    const db = readDB();
-    const newJudge = { ...newJudgeData, id: `j_${Date.now()}` };
-    db.judges.push(newJudge);
-    writeDB(db);
-    return simulateApi(newJudge);
+  const db = getDB();
+  const newJudge: Judge = {
+    id: `j_${Date.now()}`,
+    ...newJudgeData,
+  };
+  db.judges.push(newJudge);
+  saveDB(db);
+  return Promise.resolve(newJudge);
 };
 
 export const updateJudge = async (updatedJudge: Judge): Promise<Judge> => {
-    const db = readDB();
-    const index = db.judges.findIndex(j => j.id === updatedJudge.id);
-    if (index !== -1) {
-        db.judges[index] = updatedJudge;
-        writeDB(db);
-    }
-    return simulateApi(updatedJudge);
+  const db = getDB();
+  const index = db.judges.findIndex(j => j.id === updatedJudge.id);
+  if (index !== -1) {
+    db.judges[index] = updatedJudge;
+    saveDB(db);
+    return Promise.resolve(updatedJudge);
+  }
+  throw new Error("Judge not found");
 };
 
 export const deleteJudge = async (judgeId: string): Promise<{ success: boolean }> => {
-    const db = readDB();
-    db.judges = db.judges.filter(j => j.id !== judgeId);
-    db.scores = db.scores.filter(s => s.judgeId !== judgeId); // Cascade delete
-    writeDB(db);
-    return simulateApi({ success: true });
+  const db = getDB();
+  db.judges = db.judges.filter(j => j.id !== judgeId);
+  // Also delete associated scores
+  db.scores = db.scores.filter(s => s.judgeId !== judgeId);
+  saveDB(db);
+  return Promise.resolve({ success: true });
 };
 
 // Criterion API
 export const createCriterion = async (newCriterionData: Omit<Criterion, 'id'>): Promise<Criterion> => {
-    const db = readDB();
-    const newCriterion = { ...newCriterionData, id: `c_${Date.now()}` };
-    db.criteria.push(newCriterion);
-    writeDB(db);
-    return simulateApi(newCriterion);
+  const db = getDB();
+  const newCriterion: Criterion = {
+    id: `c_${Date.now()}`,
+    ...newCriterionData,
+  };
+  db.criteria.push(newCriterion);
+  saveDB(db);
+  return Promise.resolve(newCriterion);
 };
 
 export const updateCriterion = async (updatedCriterion: Criterion): Promise<Criterion> => {
-    const db = readDB();
-    const index = db.criteria.findIndex(c => c.id === updatedCriterion.id);
-    if (index !== -1) {
-        db.criteria[index] = updatedCriterion;
-        writeDB(db);
-    }
-    return simulateApi(updatedCriterion);
+  const db = getDB();
+  const index = db.criteria.findIndex(c => c.id === updatedCriterion.id);
+  if (index !== -1) {
+    db.criteria[index] = updatedCriterion;
+    saveDB(db);
+    return Promise.resolve(updatedCriterion);
+  }
+  throw new Error("Criterion not found");
 };
 
 export const deleteCriterion = async (criterionId: string): Promise<{ success: boolean }> => {
-    const db = readDB();
-    db.criteria = db.criteria.filter(c => c.id !== criterionId);
-    // Note: Deleting a criterion doesn't remove scores based on it to preserve history,
-    // but the scores will be ignored in calculations since the criterion is gone.
-    writeDB(db);
-    return simulateApi({ success: true });
+  const db = getDB();
+  db.criteria = db.criteria.filter(c => c.id !== criterionId);
+  saveDB(db);
+  return Promise.resolve({ success: true });
 };
-
 
 // Score API
 export const createOrUpdateScore = async (score: Score): Promise<Score> => {
-    const db = readDB();
-    const index = db.scores.findIndex(s => s.id === score.id);
-    if (index > -1) {
-        db.scores[index] = score;
-    } else {
-        db.scores.push(score);
-    }
-    writeDB(db);
-    return simulateApi(score);
+  const db = getDB();
+  const index = db.scores.findIndex(s => s.id === score.id);
+  if (index !== -1) {
+    db.scores[index] = score;
+  } else {
+    db.scores.push(score);
+  }
+  saveDB(db);
+  return Promise.resolve(score);
 };
 
 export const deleteScore = async (scoreId: string): Promise<{ success: boolean }> => {
-    const db = readDB();
-    db.scores = db.scores.filter(s => s.id !== scoreId);
-    writeDB(db);
-    return simulateApi({ success: true });
+  const db = getDB();
+  db.scores = db.scores.filter(s => s.id !== scoreId);
+  saveDB(db);
+  return Promise.resolve({ success: true });
 };
