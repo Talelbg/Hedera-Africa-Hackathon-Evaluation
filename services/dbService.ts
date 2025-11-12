@@ -1,5 +1,6 @@
 // services/dbService.ts
 import { Project, Judge, Criterion, Score } from '../types';
+import { MOCK_PROJECTS, MOCK_JUDGES, MOCK_CRITERIA, MOCK_SCORES } from '../data/mockData';
 
 interface DBState {
   projects: Project[];
@@ -12,18 +13,45 @@ const DB_KEY = 'hah_evaluation_platform_db';
 
 // --- Internal "Mock Database" Functions ---
 
-const readDB = (): DBState => {
+const writeDB = (db: DBState): void => {
   try {
-    const serializedState = localStorage.getItem(DB_KEY);
-    return serializedState ? JSON.parse(serializedState) : { projects: [], judges: [], criteria: [], scores: [] };
-  } catch (e) {
-    return { projects: [], judges: [], criteria: [], scores: [] };
+    localStorage.setItem(DB_KEY, JSON.stringify(db));
+  } catch(e) {
+      console.error("Failed to write to localStorage", e);
   }
 };
 
-const writeDB = (db: DBState): void => {
-  localStorage.setItem(DB_KEY, JSON.stringify(db));
+const initializeDB = (): DBState => {
+  const initialState: DBState = {
+    projects: MOCK_PROJECTS,
+    judges: MOCK_JUDGES,
+    criteria: MOCK_CRITERIA,
+    scores: MOCK_SCORES,
+  };
+  writeDB(initialState);
+  return initialState;
 };
+
+const readDB = (): DBState => {
+  try {
+    const serializedState = localStorage.getItem(DB_KEY);
+    if (!serializedState) {
+        console.log("No data found in localStorage. Initializing with mock data.");
+        return initializeDB();
+    }
+    const db = JSON.parse(serializedState);
+    // A simple check to ensure the data structure is not completely broken
+    if (!db.projects || !db.judges || !db.criteria || !db.scores) {
+        console.warn("Data in localStorage is corrupted. Re-initializing with mock data.");
+        return initializeDB();
+    }
+    return db;
+  } catch (e) {
+    console.error("Failed to read from localStorage, re-initializing with mock data.", e);
+    return initializeDB();
+  }
+};
+
 
 // --- Simulated API Service Layer ---
 // Each function simulates a network request with a short delay.
