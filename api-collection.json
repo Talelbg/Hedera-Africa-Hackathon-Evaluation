@@ -1,0 +1,328 @@
+{
+  "info": {
+    "name": "Hedera Hackathon Evaluation API",
+    "description": "Complete API collection for testing the Hedera Africa Hackathon Evaluation Backend",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001/api",
+      "type": "string"
+    },
+    {
+      "key": "projectId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "evaluationId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3001/health",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "Projects",
+      "item": [
+        {
+          "name": "Get All Projects",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"]
+            }
+          }
+        },
+        {
+          "name": "Get Projects by Track",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects?track=Onchain Finance & RWA",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"],
+              "query": [
+                {
+                  "key": "track",
+                  "value": "Onchain Finance & RWA"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Projects by Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects?status=pending",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "pending"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Projects",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects?search=DeFi",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "DeFi"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Single Project",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectId}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Project",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('projectId', response.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_name\": \"DeFi Lending Platform\",\n  \"team_name\": \"Alpha Innovators\",\n  \"track\": \"Onchain Finance & RWA\",\n  \"description\": \"A decentralized lending platform built on Hedera that enables peer-to-peer lending with tokenized collateral. Features include automated risk assessment, dynamic interest rates, and cross-border lending capabilities.\",\n  \"github_url\": \"https://github.com/alpha-team/defi-lending\",\n  \"demo_url\": \"https://defi-lending.alpha.com\",\n  \"video_url\": \"https://youtube.com/watch?v=demo123\",\n  \"contact_email\": \"alpha@example.com\",\n  \"team_members\": [\n    {\n      \"name\": \"Alice Johnson\",\n      \"role\": \"Full-Stack Developer\",\n      \"email\": \"alice@example.com\"\n    },\n    {\n      \"name\": \"Bob Smith\",\n      \"role\": \"Blockchain Developer\",\n      \"email\": \"bob@example.com\"\n    },\n    {\n      \"name\": \"Carol White\",\n      \"role\": \"UI/UX Designer\",\n      \"email\": \"carol@example.com\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"]
+            }
+          }
+        },
+        {
+          "name": "Create AI & DePIN Project",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_name\": \"AI Health Diagnostics Network\",\n  \"team_name\": \"Beta Health\",\n  \"track\": \"AI & DePIN\",\n  \"description\": \"Decentralized AI-powered health diagnostic platform using Hedera for secure medical data storage and IoT device integration for real-time health monitoring.\",\n  \"github_url\": \"https://github.com/beta-health/ai-diagnostics\",\n  \"demo_url\": \"https://ai-health.beta.com\",\n  \"video_url\": \"https://youtube.com/watch?v=health456\",\n  \"contact_email\": \"beta@example.com\",\n  \"team_members\": [\n    {\n      \"name\": \"David Lee\",\n      \"role\": \"AI/ML Engineer\",\n      \"email\": \"david@example.com\"\n    },\n    {\n      \"name\": \"Emma Wilson\",\n      \"role\": \"IoT Developer\",\n      \"email\": \"emma@example.com\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects"]
+            }
+          }
+        },
+        {
+          "name": "Update Project Status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"in_review\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Evaluations",
+      "item": [
+        {
+          "name": "Get Project Evaluations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/projects/{{projectId}}/evaluations",
+              "host": ["{{baseUrl}}"],
+              "path": ["projects", "{{projectId}}", "evaluations"]
+            }
+          }
+        },
+        {
+          "name": "Create Evaluation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('evaluationId', response.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_id\": \"{{projectId}}\",\n  \"evaluator_name\": \"Dr. Sarah Johnson\",\n  \"evaluator_email\": \"sarah.johnson@hedera.com\",\n  \"innovation_score\": 9.5,\n  \"technical_score\": 8.7,\n  \"impact_score\": 9.0,\n  \"presentation_score\": 8.5,\n  \"hedera_integration_score\": 9.2,\n  \"comments\": \"Excellent project with innovative approach to DeFi. Strong technical implementation and clear real-world impact. Hedera integration is well-executed with proper use of smart contracts and HCS. UI could be improved but overall very impressive.\",\n  \"ai_analysis\": {\n    \"strengths\": [\n      \"Novel approach to decentralized lending\",\n      \"Strong technical architecture\",\n      \"Clear market need in African markets\",\n      \"Excellent Hedera integration\"\n    ],\n    \"weaknesses\": [\n      \"UI/UX needs refinement\",\n      \"Documentation could be more comprehensive\",\n      \"Limited scalability testing\"\n    ],\n    \"recommendations\": [\n      \"Conduct more user testing\",\n      \"Expand documentation\",\n      \"Add more comprehensive test coverage\"\n    ],\n    \"overall_sentiment\": \"positive\",\n    \"confidence_score\": 0.92\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations",
+              "host": ["{{baseUrl}}"],
+              "path": ["evaluations"]
+            }
+          }
+        },
+        {
+          "name": "Create Another Evaluation (Different Judge)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_id\": \"{{projectId}}\",\n  \"evaluator_name\": \"Michael Chen\",\n  \"evaluator_email\": \"michael.chen@hedera.com\",\n  \"innovation_score\": 8.8,\n  \"technical_score\": 9.2,\n  \"impact_score\": 8.5,\n  \"presentation_score\": 7.9,\n  \"hedera_integration_score\": 9.5,\n  \"comments\": \"Strong technical execution with excellent smart contract design. Security considerations are well thought out. Hedera integration is exemplary. Presentation could use some polish.\",\n  \"ai_analysis\": {\n    \"strengths\": [\n      \"Robust smart contract architecture\",\n      \"Excellent security practices\",\n      \"Optimal use of Hedera features\"\n    ],\n    \"weaknesses\": [\n      \"Presentation needs improvement\",\n      \"Limited mobile optimization\"\n    ],\n    \"recommendations\": [\n      \"Enhance presentation materials\",\n      \"Develop mobile-responsive interface\"\n    ],\n    \"overall_sentiment\": \"positive\",\n    \"confidence_score\": 0.88\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/evaluations",
+              "host": ["{{baseUrl}}"],
+              "path": ["evaluations"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "Get Dashboard Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "dashboard"]
+            }
+          }
+        },
+        {
+          "name": "Get Overall Leaderboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/leaderboard?limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "leaderboard"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Track Leaderboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/analytics/leaderboard?track=Onchain Finance & RWA&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["analytics", "leaderboard"],
+              "query": [
+                {
+                  "key": "track",
+                  "value": "Onchain Finance & RWA"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
