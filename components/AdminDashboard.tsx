@@ -15,7 +15,7 @@ interface AdminDashboardProps {
   judges: Judge[];
   criteria: Criterion[];
   scores: Score[];
-  addProjects: (newProjects: Project[]) => void;
+  addProjects: (newProjects: Omit<Project, 'id'>[]) => void;
   editProject: (updatedProject: Project) => void;
   deleteProject: (projectId: string) => void;
   addJudge: (newJudge: Omit<Judge, 'id'>) => void;
@@ -124,7 +124,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ projects, judges, crite
                     return TRL.IDEATION;
                 };
 
-                const newProjects: Project[] = json
+                const newProjects: Omit<Project, 'id'>[] = json
                     .filter(row => row['Project Name']) // Ensure project name exists
                     .map((row, index) => {
                         const links: ProjectLink[] = row.Links?.split(',')
@@ -135,7 +135,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ projects, judges, crite
                             .filter(l => l.label && l.url) || [];
 
                         return {
-                            id: `p_imported_${Date.now()}_${index}`,
                             name: row['Project Name'],
                             description: row['Description'] || 'No description provided.',
                             track: importTrack,
